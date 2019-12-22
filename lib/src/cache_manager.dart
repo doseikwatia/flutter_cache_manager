@@ -152,12 +152,14 @@ abstract class BaseCacheManager {
 
   ///Get the file from the cache
   Future<FileInfo> getFileFromCache(String url) async {
-    return await _store.getFile(url);
+    var urlKey = getUrlKey(url);
+    return await _store.getFile(urlKey);
   }
 
   ///Returns the file from memory if it has already been fetched
   FileInfo getFileFromMemory(String url) {
-    return _store.getFileFromMemory(url);
+    var urlKey = getUrlKey(url);
+    return _store.getFileFromMemory(urlKey);
   }
 
   /// Put a file in the cache. It is recommended to specify the [eTag] and the
@@ -170,10 +172,11 @@ abstract class BaseCacheManager {
       {String eTag,
       Duration maxAge = const Duration(days: 30),
       String fileExtension = "file"}) async {
-    var cacheObject = await _store.retrieveCacheData(url);
+    var urlKey = getUrlKey(url);
+    var cacheObject = await _store.retrieveCacheData(urlKey);
     if (cacheObject == null) {
       var relativePath = "${new Uuid().v1()}.$fileExtension";
-      cacheObject = new CacheObject(url, relativePath: relativePath);
+      cacheObject = new CacheObject(urlKey, relativePath: relativePath);
     }
     cacheObject.validTill = DateTime.now().add(maxAge);
     cacheObject.eTag = eTag;
@@ -192,7 +195,8 @@ abstract class BaseCacheManager {
 
   /// Remove a file from the cache
   removeFile(String url) async {
-    var cacheObject = await _store.retrieveCacheData(url);
+    var urlKey = getUrlKey(url);
+    var cacheObject = await _store.retrieveCacheData(urlKey);
     if (cacheObject != null) {
       await _store.removeCachedFile(cacheObject);
     }
@@ -201,5 +205,11 @@ abstract class BaseCacheManager {
   /// Removes all files from the cache
   emptyCache() async {
     await _store.emptyCache();
+  }
+
+  String getUrlKey(String url) {
+    Uri uri = Uri.parse(url);
+    var urlKey = '${uri.origin}/${uri.path}';
+    return urlKey;
   }
 }
